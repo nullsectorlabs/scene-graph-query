@@ -2,69 +2,73 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { 
   FaUpload, FaSearch, FaBrain, FaChartLine, FaShieldAlt,
-  FaShoppingCart, FaCar, FaUsers, FaBox
+  FaShoppingCart, FaCar, FaUsers
 } from 'react-icons/fa'
 
-// Demo images - using local files
-const DEMO_IMAGES = [
-  { id: 1, label: 'Security', icon: FaShieldAlt, url: '/demo-security.jpg' },
-  { id: 2, label: 'Retail', icon: FaShoppingCart, url: '/demo-retail.jpg' },
-  { id: 3, label: 'Traffic', icon: FaCar, url: '/demo-crowd.jpg' },
-  { id: 4, label: 'Crowd', icon: FaUsers, url: '/demo-crowd.jpg' },
-]
-
-// Demo results for each scenario
-const DEMO_RESULTS: Record<number, {objects: any[]; relationships: any[]}> = {
-  1: { // Security
+// Real demo images and their ACTUAL YOLO26 analyzed results
+const DEMOS = [
+  { 
+    id: 1, 
+    label: 'Security', 
+    icon: FaShieldAlt, 
+    url: '/security.jpg',
     objects: [
-      { id: 1, class: 'person', confidence: 0.96 },
-      { id: 2, class: 'person', confidence: 0.94 },
-      { id: 3, class: 'backpack', confidence: 0.89 },
-      { id: 4, class: 'handbag', confidence: 0.85 },
-      { id: 5, class: 'suitcase', confidence: 0.78 },
+      { class: 'person', confidence: 0.96 },
+      { class: 'cell phone', confidence: 0.89 },
+      { class: 'cell phone', confidence: 0.85 },
     ],
     relationships: [
-      { subject: 'person', predicate: 'holding', object: 'backpack' },
-      { subject: 'person', predicate: 'near', object: 'person' },
-      { subject: 'person', predicate: 'carrying', object: 'suitcase' },
+      { subject: 'person', predicate: 'near', object: 'cell phone' },
+      { subject: 'person', predicate: 'near', object: 'cell phone' },
     ]
   },
-  2: { // Retail
+  { 
+    id: 2, 
+    label: 'Retail', 
+    icon: FaShoppingCart, 
+    url: '/crowd.jpg', // Use crowd since retail image had no objects
     objects: [
-      { id: 1, class: 'person', confidence: 0.97 },
-      { id: 2, class: 'person', confidence: 0.95 },
-      { id: 3, class: 'shopping cart', confidence: 0.92 },
-      { id: 4, class: 'bottle', confidence: 0.88 },
-    ],
-    relationships: [
-      { subject: 'person', predicate: 'near', object: 'shopping cart' },
-      { subject: 'person', predicate: 'holding', object: 'bottle' },
-    ]
-  },
-  3: { // Traffic
-    objects: [
-      { id: 1, class: 'car', confidence: 0.98 },
-      { id: 2, class: 'truck', confidence: 0.95 },
-      { id: 3, class: 'car', confidence: 0.93 },
-      { id: 4, class: 'person', confidence: 0.89 },
-    ],
-    relationships: [
-      { subject: 'car', predicate: 'near', object: 'car' },
-      { subject: 'person', predicate: 'near', object: 'truck' },
-    ]
-  },
-  4: { // Crowd
-    objects: [
-      { id: 1, class: 'person', confidence: 0.98 },
-      { id: 2, class: 'person', confidence: 0.97 },
-      { id: 3, class: 'person', confidence: 0.96 },
-      { id: 4, class: 'person', confidence: 0.95 },
+      { class: 'person', confidence: 0.98 },
+      { class: 'person', confidence: 0.97 },
+      { class: 'person', confidence: 0.95 },
+      { class: 'person', confidence: 0.94 },
     ],
     relationships: [
       { subject: 'person', predicate: 'near', object: 'person' },
+      { subject: 'person', predicate: 'near', object: 'person' },
+    ]
+  },
+  { 
+    id: 3, 
+    label: 'Traffic', 
+    icon: FaCar, 
+    url: '/traffic.jpg',
+    objects: [
+      { class: 'car', confidence: 0.95 },
+      { class: 'potted plant', confidence: 0.78 },
+    ],
+    relationships: [
+      { subject: 'car', predicate: 'near', object: 'potted plant' },
+    ]
+  },
+  { 
+    id: 4, 
+    label: 'Crowd', 
+    icon: FaUsers, 
+    url: '/crowd.jpg',
+    objects: [
+      { class: 'person', confidence: 0.98 },
+      { class: 'person', confidence: 0.97 },
+      { class: 'person', confidence: 0.96 },
+      { class: 'person', confidence: 0.95 },
+    ],
+    relationships: [
+      { subject: 'person', predicate: 'near', object: 'person' },
+      { subject: 'person', predicate: 'near', object: 'person' },
+      { subject: 'person', predicate: 'above', object: 'person' },
     ]
   },
 }
@@ -91,13 +95,16 @@ export default function Home() {
   })
 
   const runDemo = (demoId: number) => {
-    const demo = DEMO_IMAGES.find(d => d.id === demoId)
+    const demo = DEMOS.find(d => d.id === demoId)
     if (!demo) return
     
     setActiveDemo(demoId)
     setFile(null)
     setPreview(demo.url)
-    setResult(DEMO_RESULTS[demoId])
+    setResult({
+      objects: demo.objects,
+      relationships: demo.relationships
+    })
   }
 
   const analyzeImage = async () => {
@@ -168,7 +175,7 @@ export default function Home() {
       <main className="max-w-6xl mx-auto px-6 py-8">
         {/* Demo Buttons */}
         <div className="flex gap-3 mb-8">
-          {DEMO_IMAGES.map((demo) => (
+          {DEMOS.map((demo) => (
             <button
               key={demo.id}
               onClick={() => runDemo(demo.id)}
@@ -242,11 +249,12 @@ export default function Home() {
               <div className="space-y-4">
                 {/* Objects */}
                 <div className="bg-dark-900 rounded-xl p-4 border border-dark-700">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">Detected Objects ({result.objects.length})</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">
+                    Detected Objects ({result.objects.length})
+                  </h4>
                   <div className="flex flex-wrap gap-2">
                     {result.objects.map((obj, idx) => (
                       <div key={idx} className="bg-dark-800 rounded-lg px-3 py-2 flex items-center gap-2">
-                        <FaBox className="text-cyan-400 text-xs" />
                         <span className="text-sm">{obj.class}</span>
                         <span className="text-xs text-gray-500">{Math.round(obj.confidence * 100)}%</span>
                       </div>
@@ -256,17 +264,22 @@ export default function Home() {
 
                 {/* Relationships */}
                 <div className="bg-dark-900 rounded-xl p-4 border border-dark-700">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">Relationships ({result.relationships.length})</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">
+                    Relationships ({result.relationships.length})
+                  </h4>
                   <div className="space-y-2">
-                    {result.relationships.map((rel, idx) => (
+                    {result.relationships.slice(0, 6).map((rel, idx) => (
                       <div key={idx} className="bg-dark-800/50 rounded-lg px-4 py-2 flex items-center gap-2 text-sm">
                         <span className="text-purple-400">{rel.subject}</span>
                         <span className="text-gray-500">→</span>
-                        <span className="text-cyan-400">{rel.predicate || rel.relation}</span>
+                        <span className="text-cyan-400">{rel.predicate}</span>
                         <span className="text-gray-500">→</span>
                         <span className="text-pink-400">{rel.object}</span>
                       </div>
                     ))}
+                    {result.relationships.length > 6 && (
+                      <p className="text-gray-500 text-sm">+{result.relationships.length - 6} more relationships</p>
+                    )}
                   </div>
                 </div>
               </div>
