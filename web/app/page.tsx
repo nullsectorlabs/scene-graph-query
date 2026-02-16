@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { motion, AnimatePresence } from 'framer-motion'
 import { 
@@ -43,6 +43,12 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
   const [activeTab, setActiveTab] = useState<'upload' | 'demo'>('demo')
+
+  // Auto-load demo on mount
+  useEffect(() => {
+    // Auto-run Security demo on startup
+    runDemo(1)
+  }, [])
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0]
