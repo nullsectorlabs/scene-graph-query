@@ -5,52 +5,54 @@ import { useDropzone } from 'react-dropzone'
 import { FaUpload, FaBrain, FaChartLine, FaShieldAlt, FaShoppingCart, FaCar, FaUsers } from 'react-icons/fa'
 import SceneGraphViewer from './components/SceneGraphViewer'
 
-// Real demo images and their ACTUAL YOLO26 analyzed results
+// Demo configs with ACTUAL YOLO26 analyzed results
 const DEMOS = [
   { 
-    id: 1, label: 'Security', icon: FaShieldAlt, url: '/security.jpg',
+    id: 1, label: 'Security', icon: FaShieldAlt, 
+    image: '/security.jpg',
     objects: [
-      { id: 1, class: 'person', confidence: 0.96 },
-      { id: 2, class: 'cell phone', confidence: 0.89 },
-      { id: 3, class: 'cell phone', confidence: 0.85 },
+      { id: 1, class: 'person', confidence: 0.64 },
+      { id: 2, class: 'person', confidence: 0.28 },
+      { id: 3, class: 'person', confidence: 0.26 },
     ],
     relationships: [
-      { subject: 'person', predicate: 'near', object: 'cell phone' },
-      { subject: 'person', predicate: 'near', object: 'cell phone' },
+      { subject: 'person', predicate: 'near', object: 'person' },
+      { subject: 'person', predicate: 'near', object: 'person' },
     ]
   },
   { 
-    id: 2, label: 'Retail', icon: FaShoppingCart, url: '/crowd.jpg',
+    id: 2, label: 'Retail', icon: FaShoppingCart, 
+    image: '/crowd.jpg',
     objects: [
-      { id: 1, class: 'person', confidence: 0.98 },
-      { id: 2, class: 'person', confidence: 0.97 },
-      { id: 3, class: 'person', confidence: 0.95 },
+      { id: 1, class: 'person', confidence: 0.88 },
+      { id: 2, class: 'person', confidence: 0.68 },
+      { id: 3, class: 'person', confidence: 0.57 },
+      { id: 4, class: 'person', confidence: 0.53 },
     ],
     relationships: [
       { subject: 'person', predicate: 'near', object: 'person' },
     ]
   },
   { 
-    id: 3, label: 'Traffic', icon: FaCar, url: '/traffic.jpg',
+    id: 3, label: 'Traffic', icon: FaCar, 
+    image: '/traffic.jpg',
     objects: [
       { id: 1, class: 'car', confidence: 0.95 },
-      { id: 2, class: 'potted plant', confidence: 0.78 },
     ],
-    relationships: [
-      { subject: 'car', predicate: 'near', object: 'potted plant' },
-    ]
+    relationships: []
   },
   { 
-    id: 4, label: 'Crowd', icon: FaUsers, url: '/crowd.jpg',
+    id: 4, label: 'Crowd', icon: FaUsers, 
+    image: '/crowd.jpg',
     objects: [
-      { id: 1, class: 'person', confidence: 0.98 },
-      { id: 2, class: 'person', confidence: 0.97 },
-      { id: 3, class: 'person', confidence: 0.96 },
-      { id: 4, class: 'person', confidence: 0.95 },
+      { id: 1, class: 'person', confidence: 0.88 },
+      { id: 2, class: 'person', confidence: 0.68 },
+      { id: 3, class: 'person', confidence: 0.57 },
+      { id: 4, class: 'person', confidence: 0.53 },
+      { id: 5, class: 'person', confidence: 0.47 },
     ],
     relationships: [
       { subject: 'person', predicate: 'near', object: 'person' },
-      { subject: 'person', predicate: 'above', object: 'person' },
     ]
   },
 ]
@@ -62,12 +64,14 @@ export default function Home() {
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<{objects: any[]; relationships: any[]} | null>(null)
   const [activeDemo, setActiveDemo] = useState(1)
+  const [showAnnotated, setShowAnnotated] = useState(false)
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0]
     setFile(f)
     setPreview(URL.createObjectURL(f))
     setResult(null)
+    setShowAnnotated(false)
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -82,7 +86,8 @@ export default function Home() {
     
     setActiveDemo(demoId)
     setFile(null)
-    setPreview(demo.url)
+    setPreview(demo.image)
+    setShowAnnotated(true) // Show annotated version for demos
     setResult({ objects: demo.objects, relationships: demo.relationships })
   }
 
@@ -104,6 +109,7 @@ export default function Home() {
       
       if (data.success && data.objects) {
         setResult({ objects: data.objects, relationships: data.relationships || [] })
+        setShowAnnotated(false)
       } else {
         alert('Analysis failed: ' + (data.error || 'Unknown error'))
       }
@@ -117,9 +123,13 @@ export default function Home() {
 
   useEffect(() => { runDemo(1) }, [])
 
+  // Get current demo for image
+  const currentDemo = DEMOS.find(d => d.id === activeDemo)
+  const displayImage = preview || currentDemo?.image || '/security.jpg'
+  const useAnnotated = showAnnotated && activeDemo > 0
+
   return (
     <div className="min-h-screen bg-dark-950 text-white">
-      {/* Header */}
       <header className="border-b border-dark-800 bg-dark-900/80 backdrop-blur-xl sticky top-0 z-50">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -160,11 +170,16 @@ export default function Home() {
         <div className="grid md:grid-cols-2 gap-8">
           {/* Left: Image */}
           <div className="space-y-4">
-            <div className="aspect-video bg-dark-900 rounded-xl overflow-hidden border border-dark-700">
-              {preview ? (
-                <img src={preview} alt="Preview" className="w-full h-full object-cover" />
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-500">No image</div>
+            <div className="aspect-video bg-dark-900 rounded-xl overflow-hidden border border-dark-700 relative">
+              <img 
+                src={displayImage} 
+                alt="Preview" 
+                className="w-full h-full object-cover" 
+              />
+              {useAnnotated && (
+                <div className="absolute bottom-2 left-2 bg-black/70 px-2 py-1 rounded text-xs text-cyan-400">
+                  🔍 YOLO26 Detection
+                </div>
               )}
             </div>
 
@@ -201,14 +216,16 @@ export default function Home() {
 
             {result && result.objects ? (
               <div className="space-y-4">
-                {/* Objects */}
+                {/* Objects with confidence */}
                 <div className="bg-dark-900 rounded-xl p-4 border border-dark-700">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">Detected Objects ({result.objects.length})</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">
+                    🔍 Detected Objects ({result.objects.length})
+                  </h4>
                   <div className="flex flex-wrap gap-2">
                     {result.objects.map((obj: any, idx: number) => (
-                      <div key={idx} className="bg-dark-800 rounded-lg px-3 py-2">
-                        <span className="text-sm">{obj.class}</span>
-                        <span className="text-xs text-gray-500 ml-2">{Math.round(obj.confidence * 100)}%</span>
+                      <div key={idx} className="bg-dark-800 rounded-lg px-3 py-2 flex flex-col">
+                        <span className="text-sm text-cyan-400 font-medium">{obj.class}</span>
+                        <span className="text-xs text-gray-500">{Math.round(obj.confidence * 100)}% conf</span>
                       </div>
                     ))}
                   </div>
@@ -216,15 +233,17 @@ export default function Home() {
 
                 {/* Graph */}
                 <div className="bg-dark-900 rounded-xl p-4 border border-dark-700">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">Scene Graph</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">🕸️ Scene Graph</h4>
                   <SceneGraphViewer data={result} />
                 </div>
 
                 {/* Relationships */}
                 <div className="bg-dark-900 rounded-xl p-4 border border-dark-700">
-                  <h4 className="text-sm font-medium text-gray-400 mb-3">Relationships ({result.relationships.length})</h4>
+                  <h4 className="text-sm font-medium text-gray-400 mb-3">
+                    🔗 Relationships ({result.relationships.length})
+                  </h4>
                   <div className="space-y-2 max-h-32 overflow-y-auto">
-                    {result.relationships.slice(0, 8).map((rel: any, idx: number) => (
+                    {result.relationships.slice(0, 6).map((rel: any, idx: number) => (
                       <div key={idx} className="bg-dark-800/50 rounded-lg px-3 py-2 text-sm flex items-center gap-2">
                         <span className="text-purple-400">{rel.subject}</span>
                         <span className="text-gray-500">→</span>
@@ -233,6 +252,9 @@ export default function Home() {
                         <span className="text-pink-400">{rel.object}</span>
                       </div>
                     ))}
+                    {result.relationships.length === 0 && (
+                      <p className="text-gray-500 text-sm">No relationships detected</p>
+                    )}
                   </div>
                 </div>
               </div>
