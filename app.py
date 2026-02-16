@@ -27,6 +27,16 @@ except ImportError:
     subprocess.check_call(["pip", "install", "ultralytics", "-q"])
     from ultralytics import YOLO
 
+# Initialize extractor globally for API
+_extractor = None
+
+def get_extractor():
+    """Get or create the scene graph extractor."""
+    global _extractor
+    if _extractor is None:
+        _extractor = SceneGraphExtractor("yolo26n.pt")
+    return _extractor
+
 
 class SceneGraphExtractor:
     """Extract scene graph from images using YOLO + visual relationships."""
@@ -438,7 +448,154 @@ def create_demo():
     return demo
 
 
+def create_api_endpoints():
+    """Create FastAPI-style endpoints for external integration."""
+    from fastapi import FastAPI
+    import uvicorn
+    import base64
+    from io import BytesIO
+    
+    app = FastAPI(title="Scene Graph Query API")
+    
+    @app.get("/")
+    def root():
+        return {"status": "ok", "model": "yolo26n.pt", "message": "Scene Graph Query API"}
+    
+    @app.get("/health")
+    def health():
+        return {"status": "healthy", "model": "yolo26n.pt"}
+    
+    @app.post("/api/analyze")
+    async def analyze_endpoint(data: dict):
+        """Analyze image and return scene graph."""
+        try:
+            extractor = get_extractor()
+            
+            # Decode image
+            image_data = data.get("image", "")
+            if image_data.startswith("data:image"):
+                image_data = image_data.split(",")[1]
+            
+            image_bytes = base64.b64decode(image_data)
+            image = Image.open(BytesIO(image_bytes)).convert("RGB")
+            
+            # Get query
+            query = data.get("query", "list all objects")
+            
+            # Extract scene graph
+            scene_graph = extractor.process_image(image)
+            
+            # Query the graph
+            engine = GraphQueryEngine(scene_graph)
+            results = engine.query(query)
+            
+            return {
+                "success": True,
+                "objects": scene_graph["objects"],
+                "relationships": scene_graph["relationships"],
+                "query_results": results,
+                "num_objects": scene_graph["num_objects"],
+                "num_relationships": scene_graph["num_relationships"],
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    @app.post("/api/query")
+    async def query_endpoint(data: dict):
+        """Query existing scene graph."""
+        try:
+            query = data.get("query", "find all people")
+            scene_graph = data.get("scene_graph", {})
+            
+            if not scene_graph:
+                return {"success": False, "error": "No scene graph provided"}
+            
+            engine = GraphQueryEngine(scene_graph)
+            results = engine.query(query)
+            
+            return {
+                "success": True,
+                "results": results,
+            }
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+    
+    return app
+
+
 if __name__ == "__main__":
     from io import BytesIO
+    import threading
+    
+    # Start FastAPI server in background
+    def run_api():
+        try:
+            from fastapi import FastAPI
+            import uvicorn
+            from fastapi.middleware.cors import CORSMiddleware
+            
+            app = FastAPI(title="Scene Graph Query API")
+            
+            # Add CORS
+            app.add_middleware(
+                CORSMiddleware,
+                allow_origins=["*"],
+                allow_credentials=True,
+                allow_methods=["*"],
+                allow_headers=["*"],
+            )
+            
+            @app.get("/")
+            def root():
+                return {"status": "ok", "model": "yolo26n.pt"}
+            
+            @app.get("/health")
+            def health():
+                return {"status": "healthy", "model": "yolo26n.pt"}
+            
+            @app.post("/api/analyze")
+            async def analyze(data: dict):
+                try:
+                    extractor = get_extractor()
+                    
+                    # Decode image
+                    image_data = data.get("image", "")
+                    if not image_data:
+                        return {"success": False, "error": "No image provided"}
+                    
+                    # Handle data URL or base64
+                    if "data:image" in image_data:
+                        image_data = image_data.split(",")[1]
+                    
+                    image_bytes = base64.b64decode(image_data)
+                    image = Image.open(BytesIO(image_bytes)).convert("RGB")
+                    
+                    query = data.get("query", "list all objects")
+                    
+                    scene_graph = extractor.process_image(image)
+                    engine = GraphQueryEngine(scene_graph)
+                    results = engine.query(query)
+                    
+                    return {
+                        "success": True,
+                        "objects": scene_graph["objects"],
+                        "relationships": scene_graph["relationships"],
+                        "query_results": results,
+                        "num_objects": scene_graph["num_objects"],
+                        "num_relationships": scene_graph["num_relationships"],
+                    }
+                except Exception as e:
+                    return {"success": False, "error": str(e)}
+            
+            print("Starting API server on port 7861...")
+            uvicorn.run(app, host="0.0.0.0", port=7861, log_level="error")
+        except ImportError:
+            print("FastAPI not installed, skipping API server")
+    
+    # Start API in background thread
+    api_thread = threading.Thread(target=run_api, daemon=True)
+    api_thread.start()
+    
+    # Start Gradio
     demo = create_demo()
     demo.launch(server_name="0.0.0.0", server_port=7860)

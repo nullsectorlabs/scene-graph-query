@@ -8,6 +8,7 @@ import {
   FaCog, FaCheck, FaSpinner, FaChartLine, FaShieldAlt,
   FaWarehouse, FaShoppingCart, FaCar, FaUsers
 } from 'react-icons/fa'
+import SceneGraphViewer from './components/SceneGraphViewer'
 
 // Demo images for showcase
 const DEMO_IMAGES = [
@@ -31,8 +32,13 @@ interface Relationship {
 
 interface AnalysisResult {
   objects: SceneObject[]
-  relationships: Relationship[]
-  graphImage?: string
+  relationships: Array<{subject: string; predicate: string; object: string}>
+  query_results?: {
+    primary_objects: SceneObject[]
+    relationships_found: Array<{subject: string; predicate: string; object: string}>
+  }
+  num_objects?: number
+  num_relationships?: number
 }
 
 export default function Home() {
@@ -72,7 +78,7 @@ export default function Home() {
           .reduce((data, byte) => data + String.fromCharCode(byte), '')
       )
       
-      const response = await fetch('http://localhost:7860/api/analyze', {
+      const response = await fetch('http://localhost:7861/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -127,8 +133,8 @@ export default function Home() {
         { id: 4, class: 'handbag', confidence: 0.85 },
       ],
       relationships: [
-        { subject: 'person', relation: 'holding', object: 'backpack' },
-        { subject: 'person', relation: 'near', object: 'person' },
+        { subject: 'person', predicate: 'holding', object: 'backpack' },
+        { subject: 'person', predicate: 'near', object: 'person' },
       ]
     })
   }
@@ -340,7 +346,7 @@ export default function Home() {
                         >
                           <span className="text-accent-purple">{rel.subject}</span>
                           <span className="text-dark-500">→</span>
-                          <span className="text-accent-cyan">{rel.relation}</span>
+                          <span className="text-accent-cyan">{rel.predicate || rel.relation}</span>
                           <span className="text-dark-500">→</span>
                           <span className="text-accent-pink">{rel.object}</span>
                         </div>
@@ -348,14 +354,10 @@ export default function Home() {
                     </div>
                   </div>
 
-                  {/* Graph Visualization Placeholder */}
+                  {/* Graph Visualization */}
                   <div>
-                    <h4 className="text-sm font-medium text-dark-400 mb-3">Scene Graph</h4>
-                    <div className="bg-dark-900 rounded-xl p-4 h-48 flex items-center justify-center border border-dark-700">
-                      <p className="text-dark-500 text-sm">
-                        Interactive graph visualization
-                      </p>
-                    </div>
+                    <h4 className="text-sm font-medium text-dark-400 mb-3">Scene Graph Visualization</h4>
+                    <SceneGraphViewer data={result} />
                   </div>
                 </motion.div>
               ) : (
