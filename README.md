@@ -89,7 +89,7 @@ scene-graph-query/
 from app import SceneGraphExtractor, GraphQueryEngine
 from PIL import Image
 
-extractor = SceneGraphExtractor("yolov8n.pt")
+extractor = SceneGraphExtractor("yolo26n.pt")
 graph = extractor.process_image(Image.open("photo.jpg"))
 
 engine = GraphQueryEngine(graph)
@@ -101,7 +101,7 @@ results = engine.query("find all people holding bags")
 ```python
 from video_app import VideoSceneGraphExtractor, TemporalQueryEngine
 
-extractor = VideoSceneGraphExtractor("yolov8n.pt")
+extractor = VideoSceneGraphExtractor("yolo26n.pt")
 video_data = extractor.process_video("video.mp4")
 
 engine = TemporalQueryEngine(video_data)
@@ -112,11 +112,32 @@ results = engine.query("find stationary objects")
 
 - Python 3.9+
 - PyTorch 2.0+
-- Ultralytics YOLOv8
+- Ultralytics **YOLO26** (latest!)
+- SAM3 (Meta's Segment Anything Model 3)
 - Gradio 4.0+
 - NetworkX
 
 Install via: `uv sync`
+
+## 🔧 Running
+
+### Web UI (Gradio)
+```bash
+python app.py
+```
+Opens http://localhost:7860
+
+### React Frontend (Next.js)
+```bash
+cd web && npm install && npm run dev
+```
+Opens http://localhost:3000
+
+### Docker
+```bash
+docker build -t scene-graph-query .
+docker run -p 7860:7860 scene-graph-query
+```
 
 ## 🔒 Security
 
