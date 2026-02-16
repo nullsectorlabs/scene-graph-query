@@ -50,30 +50,39 @@ export default function Home() {
       return
     }
     setIsAnalyzing(true)
+    console.log('Starting analysis, file:', file.name, 'size:', file.size)
     try {
       const base64 = await new Promise<string>((resolve, reject) => {
         const reader = new FileReader()
         reader.onload = () => {
           const result = reader.result as string
+          console.log('FileReader result type:', result.substring(0, 30))
           const data = result.includes(',') ? result.split(',')[1] : result
+          console.log('Base64 length:', data.length)
           resolve(data)
         }
-        reader.onerror = reject
+        reader.onerror = (e) => {
+          console.error('FileReader error:', e)
+          reject(e)
+        }
         reader.readAsDataURL(file)
       })
+      console.log('Sending to API...')
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64, query: query || 'list all objects' })
       })
-      if (!response.ok) throw new Error(`Server error: ${response.status}`)
+      console.log('Response status:', response.status)
       const data = await response.json()
-      if (data.success && data.objects) {
+      console.log('Response data:', data)
+      if (data.success && data.objects && data.objects.length > 0) {
         setResult({ objects: data.objects, relationships: data.relationships || [] })
         setShowAnnotated(false)
         setActiveDemo(0)
       } else {
-        alert('Analysis failed: ' + (data.error || 'Unknown'))
+        console.log('No objects detected or error:', data)
+        alert('No objects detected. Try a clearer image.')
       }
     } catch (error: any) {
       console.error(error)
