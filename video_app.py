@@ -26,7 +26,7 @@ import os
 class VideoSceneGraphExtractor:
     """Extract scene graphs from video frames with tracking."""
     
-    def __init__(self, model_name: str = "yolov8n.pt"):
+    def __init__(self, model_name: str = "yolo26n.pt"):
         print(f"Loading YOLO model: {model_name}...")
         self.model = YOLO(model_name)
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -206,7 +206,7 @@ class TemporalQueryEngine:
 
 def create_video_demo():
     """Create video scene graph demo."""
-    extractor = VideoSceneGraphExtractor("yolov8n.pt")
+    extractor = VideoSceneGraphExtractor("yolo26n.pt")
     
     def process_video_file(video_file, nl_query):
         try:

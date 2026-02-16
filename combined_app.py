@@ -13,8 +13,8 @@ def create_combined_demo():
     """Create combined image + video demo with tabs."""
     
     # Initialize extractors
-    image_extractor = SceneGraphExtractor("yolov8n.pt")
-    video_extractor = VideoSceneGraphExtractor("yolov8n.pt")
+    image_extractor = SceneGraphExtractor("yolo26n.pt")
+    video_extractor = VideoSceneGraphExtractor("yolo26n.pt")
     
     # Image processing function
     def process_image(image_source, nl_query):

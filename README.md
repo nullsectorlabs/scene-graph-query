@@ -45,7 +45,7 @@ scene-graph-query/
 ## 🎬 Features
 
 ### ✅ Image Scene Graphs
-- YOLOv8 object detection
+- YOLO26 object detection
 - Spatial relationship inference (above, below, near, holding, on)
 - NetworkX graph construction
 - Natural language query interface
@@ -113,7 +113,6 @@ results = engine.query("find stationary objects")
 - Python 3.9+
 - PyTorch 2.0+
 - Ultralytics **YOLO26** (latest!)
-- SAM3 (Meta's Segment Anything Model 3)
 - Gradio 4.0+
 - NetworkX
 
