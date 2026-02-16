@@ -72,6 +72,7 @@ export default function Home() {
     setPreview(URL.createObjectURL(f))
     setResult(null)
     setShowAnnotated(false)
+    setActiveDemo(0) // Clear demo selection when uploading
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -92,12 +93,23 @@ export default function Home() {
   }
 
   const analyzeImage = async () => {
-    if (!file) return
+    if (!file) {
+      alert('Please upload an image first')
+      return
+    }
+    
     setIsAnalyzing(true)
+    console.log('Starting analysis for file:', file.name)
     
     try {
       const arrayBuffer = await file.arrayBuffer()
-      const base64 = btoa(new Uint8Array(arrayBuffer).reduce((d, b) => d + String.fromCharCode(b), ''))
+      const bytes = new Uint8Array(arrayBuffer)
+      let binary = ''
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      const base64 = btoa(binary)
+      console.log('Sending to API, base64 length:', base64.length)
       
       const response = await fetch('http://localhost:7861/api/analyze', {
         method: 'POST',
@@ -105,17 +117,20 @@ export default function Home() {
         body: JSON.stringify({ image: base64, query: query || 'list all objects' })
       })
       
+      console.log('Response status:', response.status)
       const data = await response.json()
+      console.log('Response data:', data)
       
       if (data.success && data.objects) {
         setResult({ objects: data.objects, relationships: data.relationships || [] })
         setShowAnnotated(false)
+        setActiveDemo(0)
       } else {
         alert('Analysis failed: ' + (data.error || 'Unknown error'))
       }
     } catch (error) {
-      console.error('Error:', error)
-      alert('Failed to analyze image')
+      console.error('Analysis error:', error)
+      alert('Failed to analyze image: ' + (error as Error).message)
     }
     
     setIsAnalyzing(false)
