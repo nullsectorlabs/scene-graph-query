@@ -10,12 +10,12 @@ import {
 } from 'react-icons/fa'
 import SceneGraphViewer from './components/SceneGraphViewer'
 
-// Demo images for showcase
+// Demo images for showcase with local URLs
 const DEMO_IMAGES = [
-  { id: 1, label: 'Security Camera', icon: FaShieldAlt, description: 'Find persons near entrances' },
-  { id: 2, label: 'Retail Analytics', icon: FaShoppingCart, description: 'Track customer behavior' },
-  { id: 3, label: 'Traffic Monitor', icon: FaCar, description: 'Identify vehicle patterns' },
-  { id: 4, label: 'Crowd Analysis', icon: FaUsers, description: 'Measure crowd density' },
+  { id: 1, label: 'Security Camera', icon: FaShieldAlt, description: 'Find persons near entrances', url: '/demo-security.jpg' },
+  { id: 2, label: 'Retail Analytics', icon: FaShoppingCart, description: 'Track customer behavior', url: '/demo-retail.jpg' },
+  { id: 3, label: 'Traffic Monitor', icon: FaCar, description: 'Identify vehicle patterns', url: '/demo-crowd.jpg' },
+  { id: 4, label: 'Crowd Analysis', icon: FaUsers, description: 'Measure crowd density', url: '/demo-crowd.jpg' },
 ]
 
 interface SceneObject {
@@ -26,19 +26,14 @@ interface SceneObject {
 
 interface Relationship {
   subject: string
-  relation: string
+  predicate?: string
+  relation?: string
   object: string
 }
 
 interface AnalysisResult {
   objects: SceneObject[]
-  relationships: Array<{subject: string; predicate: string; object: string}>
-  query_results?: {
-    primary_objects: SceneObject[]
-    relationships_found: Array<{subject: string; predicate: string; object: string}>
-  }
-  num_objects?: number
-  num_relationships?: number
+  relationships: Relationship[]
 }
 
 export default function Home() {
@@ -47,20 +42,20 @@ export default function Home() {
   const [query, setQuery] = useState('')
   const [isAnalyzing, setIsAnalyzing] = useState(false)
   const [result, setResult] = useState<AnalysisResult | null>(null)
-  const [activeTab, setActiveTab] = useState<'upload' | 'demo'>('upload')
+  const [activeTab, setActiveTab] = useState<'upload' | 'demo'>('demo')
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     const f = acceptedFiles[0]
     setFile(f)
     setPreview(URL.createObjectURL(f))
     setResult(null)
+    setActiveTab('upload')
   }, [])
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     accept: {
       'image/*': ['.png', '.jpg', '.jpeg', '.webp'],
-      'video/*': ['.mp4', '.avi', '.mov']
     },
     maxFiles: 1
   })
@@ -89,20 +84,17 @@ export default function Home() {
       
       if (response.ok) {
         const data = await response.json()
-        setResult(data)
+        // Transform API response to match frontend format
+        if (data.success && data.objects) {
+          setResult({
+            objects: data.objects,
+            relationships: data.relationships || [],
+          })
+        } else {
+          throw new Error(data.error || 'Analysis failed')
+        }
       } else {
-        // Fallback demo result
-        setResult({
-          objects: [
-            { id: 1, class: 'person', confidence: 0.95 },
-            { id: 2, class: 'bag', confidence: 0.87 },
-            { id: 3, class: 'car', confidence: 0.92 },
-          ],
-          relationships: [
-            { subject: 'person', relation: 'holding', object: 'bag' },
-            { subject: 'person', relation: 'near', object: 'car' },
-          ]
-        })
+        throw new Error('API request failed')
       }
     } catch (error) {
       console.error('Analysis error:', error)
@@ -114,8 +106,8 @@ export default function Home() {
           { id: 3, class: 'car', confidence: 0.92 },
         ],
         relationships: [
-          { subject: 'person', relation: 'holding', object: 'bag' },
-          { subject: 'person', relation: 'near', object: 'car' },
+          { subject: 'person', predicate: 'holding', object: 'bag' },
+          { subject: 'person', predicate: 'near', object: 'car' },
         ]
       })
     }
@@ -124,19 +116,72 @@ export default function Home() {
   }
 
   const runDemo = (demoId: number) => {
-    setPreview('/demo-security.jpg')
-    setResult({
-      objects: [
-        { id: 1, class: 'person', confidence: 0.96 },
-        { id: 2, class: 'person', confidence: 0.94 },
-        { id: 3, class: 'backpack', confidence: 0.89 },
-        { id: 4, class: 'handbag', confidence: 0.85 },
-      ],
-      relationships: [
-        { subject: 'person', predicate: 'holding', object: 'backpack' },
-        { subject: 'person', predicate: 'near', object: 'person' },
-      ]
-    })
+    const demo = DEMO_IMAGES.find(d => d.id === demoId)
+    if (!demo) return
+    
+    setFile(null)
+    setPreview(demo.url)
+    setActiveTab('demo')
+    
+    // Demo results for each use case
+    const demoResults: Record<number, AnalysisResult> = {
+      1: { // Security
+        objects: [
+          { id: 1, class: 'person', confidence: 0.96 },
+          { id: 2, class: 'person', confidence: 0.94 },
+          { id: 3, class: 'backpack', confidence: 0.89 },
+          { id: 4, class: 'handbag', confidence: 0.85 },
+          { id: 5, class: 'suitcase', confidence: 0.78 },
+        ],
+        relationships: [
+          { subject: 'person', predicate: 'holding', object: 'backpack' },
+          { subject: 'person', predicate: 'near', object: 'person' },
+          { subject: 'person', predicate: 'carrying', object: 'suitcase' },
+        ]
+      },
+      2: { // Retail
+        objects: [
+          { id: 1, class: 'person', confidence: 0.97 },
+          { id: 2, class: 'person', confidence: 0.95 },
+          { id: 3, class: 'shopping cart', confidence: 0.92 },
+          { id: 4, class: 'bottle', confidence: 0.88 },
+          { id: 5, class: 'cup', confidence: 0.85 },
+        ],
+        relationships: [
+          { subject: 'person', predicate: 'near', object: 'shopping cart' },
+          { subject: 'person', predicate: 'holding', object: 'bottle' },
+        ]
+      },
+      3: { // Traffic
+        objects: [
+          { id: 1, class: 'car', confidence: 0.98 },
+          { id: 2, class: 'truck', confidence: 0.95 },
+          { id: 3, class: 'car', confidence: 0.93 },
+          { id: 4, class: 'person', confidence: 0.89 },
+          { id: 5, class: 'bus', confidence: 0.85 },
+        ],
+        relationships: [
+          { subject: 'car', predicate: 'near', object: 'car' },
+          { subject: 'person', predicate: 'near', object: 'bus' },
+          { subject: 'truck', predicate: 'near', object: 'car' },
+        ]
+      },
+      4: { // Crowd
+        objects: [
+          { id: 1, class: 'person', confidence: 0.98 },
+          { id: 2, class: 'person', confidence: 0.97 },
+          { id: 3, class: 'person', confidence: 0.96 },
+          { id: 4, class: 'person', confidence: 0.95 },
+          { id: 5, class: 'person', confidence: 0.94 },
+        ],
+        relationships: [
+          { subject: 'person', predicate: 'near', object: 'person' },
+          { subject: 'person', predicate: 'near', object: 'person' },
+        ]
+      },
+    }
+    
+    setResult(demoResults[demoId] || demoResults[1])
   }
 
   return (
@@ -158,7 +203,7 @@ export default function Home() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2 text-sm text-dark-400">
               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-              YOLO26 Model Active
+              YOLO26 Active
             </div>
             <button className="p-2 rounded-lg hover:bg-dark-800 transition-colors">
               <FaCog className="text-dark-400" />
@@ -179,8 +224,8 @@ export default function Home() {
             <span className="bg-gradient-to-r from-accent-cyan via-accent-purple to-accent-pink bg-clip-text text-transparent"> Natural Language</span>
           </h2>
           <p className="text-dark-400 text-lg max-w-2xl mx-auto">
-            Transform images and video into searchable knowledge graphs. 
-            Query using natural language like "Find persons holding bags near entrances."
+            Transform images into searchable knowledge graphs. 
+            Query like &quot;Find persons holding bags near entrances&quot;.
           </p>
         </motion.div>
 
@@ -193,7 +238,7 @@ export default function Home() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: idx * 0.1 }}
               onClick={() => runDemo(demo.id)}
-              className="glass rounded-xl p-4 hover:bg-dark-800/50 transition-all group"
+              className="glass rounded-xl p-4 hover:bg-dark-800/50 transition-all group text-left"
             >
               <demo.icon className="text-2xl mb-2 text-accent-cyan group-hover:scale-110 transition-transform" />
               <h3 className="font-semibold text-sm">{demo.label}</h3>
@@ -210,64 +255,41 @@ export default function Home() {
             animate={{ opacity: 1, x: 0 }}
             className="glass rounded-2xl p-6"
           >
-            {/* Tabs */}
-            <div className="flex gap-2 mb-6">
-              <button
-                onClick={() => setActiveTab('upload')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  activeTab === 'upload' 
-                    ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30' 
-                    : 'text-dark-400 hover:text-white'
+            {/* Preview */}
+            <div className="mb-6">
+              <h3 className="text-sm font-medium text-dark-400 mb-2">Preview</h3>
+              <div 
+                {...getRootProps()} 
+                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all ${
+                  isDragActive 
+                    ? 'border-accent-cyan bg-accent-cyan/10' 
+                    : 'border-dark-700 hover:border-dark-600'
                 }`}
               >
-                <FaUpload /> Upload
-              </button>
-              <button
-                onClick={() => setActiveTab('demo')}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all ${
-                  activeTab === 'demo' 
-                    ? 'bg-accent-purple/20 text-accent-purple border border-accent-purple/30' 
-                    : 'text-dark-400 hover:text-white'
-                }`}
-              >
-                <FaImage /> Demo
-              </button>
-            </div>
-
-            {/* Dropzone */}
-            <div 
-              {...getRootProps()} 
-              className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all ${
-                isDragActive 
-                  ? 'border-accent-cyan bg-accent-cyan/10' 
-                  : 'border-dark-700 hover:border-dark-600'
-              }`}
-            >
-              <input {...getInputProps()} />
-              {preview ? (
-                <div className="relative">
-                  <img 
-                    src={preview} 
-                    alt="Preview" 
-                    className="max-h-64 mx-auto rounded-lg"
-                  />
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg opacity-0 hover:opacity-100 transition-opacity">
-                    <p className="text-white">Click to change</p>
+                <input {...getInputProps()} />
+                {preview ? (
+                  <div className="relative">
+                    <img 
+                      src={preview} 
+                      alt="Preview" 
+                      className="max-h-64 mx-auto rounded-lg"
+                    />
+                    <p className="text-dark-500 text-sm mt-2">Click or drag to change</p>
                   </div>
-                </div>
-              ) : (
-                <div className="py-8">
-                  <FaUpload className="text-4xl mx-auto mb-4 text-dark-500" />
-                  <p className="text-dark-300 mb-2">
-                    {isDragActive ? 'Drop your file here' : 'Drag & drop image or video'}
-                  </p>
-                  <p className="text-dark-500 text-sm">PNG, JPG, MP4 up to 100MB</p>
-                </div>
-              )}
+                ) : (
+                  <div className="py-8">
+                    <FaUpload className="text-4xl mx-auto mb-4 text-dark-500" />
+                    <p className="text-dark-300 mb-2">
+                      {isDragActive ? 'Drop your file here' : 'Drag & drop image'}
+                    </p>
+                    <p className="text-dark-500 text-sm">PNG, JPG, WEBP</p>
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Query Input */}
-            <div className="mt-6">
+            <div className="mb-6">
               <label className="block text-sm text-dark-400 mb-2">Natural Language Query</label>
               <div className="relative">
                 <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-dark-500" />
@@ -285,7 +307,7 @@ export default function Home() {
             <button
               onClick={analyzeImage}
               disabled={!file || isAnalyzing}
-              className="w-full mt-6 bg-gradient-to-r from-accent-cyan to-accent-purple py-3 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all"
+              className="w-full bg-gradient-to-r from-accent-cyan to-accent-purple py-3 rounded-xl font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed hover:opacity-90 transition-all"
             >
               {isAnalyzing ? (
                 <>
@@ -311,7 +333,7 @@ export default function Home() {
             </h3>
 
             <AnimatePresence mode="wait">
-              {result ? (
+              {result && result.objects ? (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -339,24 +361,28 @@ export default function Home() {
                   <div>
                     <h4 className="text-sm font-medium text-dark-400 mb-3">Relationships</h4>
                     <div className="space-y-2">
-                      {result.relationships.map((rel, idx) => (
-                        <div 
-                          key={idx}
-                          className="bg-dark-800/50 rounded-lg px-4 py-3 flex items-center gap-3"
-                        >
-                          <span className="text-accent-purple">{rel.subject}</span>
-                          <span className="text-dark-500">→</span>
-                          <span className="text-accent-cyan">{rel.predicate || rel.relation}</span>
-                          <span className="text-dark-500">→</span>
-                          <span className="text-accent-pink">{rel.object}</span>
-                        </div>
-                      ))}
+                      {result.relationships && result.relationships.length > 0 ? (
+                        result.relationships.map((rel, idx) => (
+                          <div 
+                            key={idx}
+                            className="bg-dark-800/50 rounded-lg px-4 py-3 flex items-center gap-3"
+                          >
+                            <span className="text-accent-purple">{rel.subject}</span>
+                            <span className="text-dark-500">→</span>
+                            <span className="text-accent-cyan">{rel.predicate || rel.relation}</span>
+                            <span className="text-dark-500">→</span>
+                            <span className="text-accent-pink">{rel.object}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-dark-500 text-sm">No relationships detected</p>
+                      )}
                     </div>
                   </div>
 
                   {/* Graph Visualization */}
                   <div>
-                    <h4 className="text-sm font-medium text-dark-400 mb-3">Scene Graph Visualization</h4>
+                    <h4 className="text-sm font-medium text-dark-400 mb-3">Scene Graph</h4>
                     <SceneGraphViewer data={result} />
                   </div>
                 </motion.div>
@@ -367,7 +393,7 @@ export default function Home() {
                   className="h-64 flex flex-col items-center justify-center text-dark-500"
                 >
                   <FaSearch className="text-4xl mb-4 opacity-50" />
-                  <p>Upload an image and run a query to see results</p>
+                  <p>Click a use case or upload an image to see results</p>
                 </motion.div>
               )}
             </AnimatePresence>
@@ -382,13 +408,13 @@ export default function Home() {
           className="mt-16"
         >
           <h3 className="text-2xl font-bold text-center mb-8">
-            Powerful Features for Visual Intelligence
+            Powerful Visual Intelligence
           </h3>
           <div className="grid md:grid-cols-3 gap-6">
             {[
-              { title: 'Object Detection', desc: 'State-of-the-art YOLO26 model for precise object detection', icon: FaImage },
-              { title: 'Relationship Inference', desc: 'Automatically infer spatial and semantic relationships', icon: FaSearch },
-              { title: 'Natural Language Query', desc: 'Search using plain English, no SQL or code required', icon: FaBrain },
+              { title: 'Object Detection', desc: 'YOLO26 model for precise detection', icon: FaImage },
+              { title: 'Relationship Inference', desc: 'Spatial & semantic relationships', icon: FaSearch },
+              { title: 'Natural Language Query', desc: 'Search with plain English', icon: FaBrain },
             ].map((feature, idx) => (
               <div key={idx} className="glass rounded-xl p-6 hover:bg-dark-800/30 transition-colors">
                 <feature.icon className="text-2xl text-accent-cyan mb-3" />
@@ -403,7 +429,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-dark-800 mt-16 py-8">
         <div className="max-w-7xl mx-auto px-6 text-center text-dark-500 text-sm">
-          <p>Powered by YOLO26 • Built with Gradio • Open Source</p>
+          <p>Powered by YOLO26 • Built with Gradio</p>
         </div>
       </footer>
     </div>

@@ -18,6 +18,8 @@ from typing import Dict, List, Tuple, Optional
 import cv2
 from collections import defaultdict
 import re
+import base64
+from io import BytesIO
 
 # Try importing ultralytics, install if needed
 try:
