@@ -46,7 +46,7 @@ class SceneGraphExtractor:
         "on": ["on", "sitting on", "standing on"],
     }
     
-    def __init__(self, model_name: str = "yolov8n.pt"):
+    def __init__(self, model_name: str = "yolo26n.pt"):
         """Initialize with YOLO model."""
         print(f"Loading YOLO model: {model_name}...")
         self.model = YOLO(model_name)
@@ -331,7 +331,7 @@ def create_demo():
     """Create Gradio demo interface."""
     
     # Initialize extractor
-    extractor = SceneGraphExtractor("yolov8n.pt")
+    extractor = SceneGraphExtractor("yolo26n.pt")
     
     def process_image(image_url: str, nl_query: str):
         """Process image and answer query."""

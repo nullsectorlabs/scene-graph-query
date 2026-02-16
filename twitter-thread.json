@@ -1,0 +1,26 @@
+[
+  {
+    "text": "🧵 Build a scene graph from any image, then query it with natural language. \"Find all people holding objects\" → instant results. Here's how we built it.",
+    "media": null
+  },
+  {
+    "text": "Traditional object detection gives you boxes. But understanding scenes requires knowing *relationships*. Who's holding what? What's on top of what's in front of what?\n\nThat's where scene graphs come in.",
+    "media": null
+  },
+  {
+    "text": "We combine:\n\n▸ YOLO26 (latest!) for faster detection\n▸ SAM3 (Meta's latest) for segmentation  \n▸ Spatial reasoning for relationships\n▸ NetworkX for graph representation\n▸ Natural language query parsing\n\nThe result: a queryable graph of your image.",
+    "media": null
+  },
+  {
+    "text": "Example queries that work:\n\n\"people near cars\" → traverses spatial edges\n\"objects on table\" → follows \"on\" relationships\n\"person holding phone\" → filters for specific edges\n\nThe graph knows geometry + semantics.",
+    "media": null
+  },
+  {
+    "text": "Open source: github.com/nullsectorlabs/scene-graph-query\n\n▸ Run locally with Python\n▸ Docker deployment ready\n▸ React + FastAPI frontend\n▸ Export to JSON, RDF, or captions\n\nDemo running at nullsector.cloud (DM for access)",
+    "media": null
+  },
+  {
+    "text": "What would you query? Drop an image URL and I'll run it through the scene graph. 🖼️\n\n#ComputerVision #SceneGraph #AI #ML",
+    "media": null
+  }
+]
