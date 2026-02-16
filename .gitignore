@@ -74,3 +74,5 @@ tmp/
 temp/
 assets/
 web/node_modules/
+web/.next/
+web/node_modules/
