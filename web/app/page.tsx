@@ -61,7 +61,7 @@ export default function Home() {
         reader.onerror = reject
         reader.readAsDataURL(file)
       })
-      const response = await fetch('http://localhost:7861/api/analyze', {
+      const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ image: base64, query: query || 'list all objects' })
